@@ -3,7 +3,8 @@ html {
 }
 
 body {
-    width: 1000px;
+    width: 720px;
+    color: white;
     margin: 0 auto;
     background-color: blue;
     padding: 0 20px 20px 20px;
@@ -12,10 +13,9 @@ body {
 
 h1 {
     color: white;
-    width: 1000px;
     border: 1px solid black;
     font-size: 60px;
-    text-align: center;
+    text-align: left;
 
     margin: 0;
     padding: 20px 0;
@@ -23,6 +23,7 @@ h1 {
 }
 
 p {
+    font-family: 'Times New Roman', Times, serif;
     color: white;
     border: 1px solid black;    
     font-size: 16px;
@@ -33,10 +34,47 @@ p {
 img {
     display: block;
     margin: 0 auto;
+    border-radius: 50%;
 }
 
-#id1:hover {
-    color: darkcyan;
-    width: 500px;
-    border: 1px solid red;
+img:hover {
+    cursor: pointer;
+}
+
+.mytabs {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 25px auto;
+    padding: 25px;
+}
+
+.mytabs input[type="radio"] {
+    display: none;
+}
+
+.mytabs label {
+    padding: 25px;
+    background: lightgray;
+    color: black;
+    order: 1;
+}
+
+.mytabs .tab {
+    width: 100%;
+    text-align: left;
+    order: 2;
+    display: none;
+}
+
+.mytabs input[type="radio"]:checked + label + .tab {
+    display: block;
+}
+
+.mytabs input[type="radio"]:checked + label {
+    background-color: white;
+}
+
+.mytabs label:hover {
+    cursor: pointer;
+    background-color: pink;
 }
