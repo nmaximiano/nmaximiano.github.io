@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accord - Dynamic Colored Particles with Smooth Transitions</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #1a1a1a; 
+            font-family: Arial, sans-serif; 
+            color: #f0f0f0;
+        }
+        canvas { display: block; }
+        .hamburger {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        .bar {
+            width: 25px;
+            height: 3px;
+            background-color: #f0f0f0;
+            margin: 5px 0;
+            transition: 0.4s;
+        }
+        .sidebar {
+            height: 100%;
+            width: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #111;
+            overflow-x: hidden;
+            transition: 0.5s;
+            padding-top: 60px;
+            z-index: 999;
+        }
+        .sidebar a {
+            padding: 10px 15px;
+            text-decoration: none;
+            font-size: 25px;
+            color: #f0f0f0;
+            display: block;
+            transition: 0.3s;
+        }
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+        #main {
+            transition: margin-left 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div class="hamburger" onclick="toggleSidebar()">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+    </div>
+    <div id="mySidebar" class="sidebar">
+        <a href="javascript:void(0)" onclick="showContent('music')">music</a>
+        <a href="javascript:void(0)" onclick="showContent('mona')">mona</a>
+        <a href="javascript:void(0)" onclick="showContent('star')">star</a>
+        <a href="javascript:void(0)" onclick="showContent('nighthawks')">nighthawks</a>
+        <a href="javascript:void(0)" onclick="showContent('goblin')">goblin</a>
+        <a href="javascript:void(0)" onclick="showContent('minecraft')">minecraft</a>
+        <a href="javascript:void(0)" onclick="showContent('discovery')">discovery</a>
+        <a href="javascript:void(0)" onclick="showContent('prod')">prod</a>
+    </div>
+    <div id="main">
+        <canvas id="particleCanvas"></canvas>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let particles = [];
+        let mouse = { x: null, y: null };
+        let currentShape = 'accord';
+        const PARTICLE_COUNT = 5000;
+        const TRANSITION_DURATION = 2000; // 2 seconds for color transition
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 2 + 1;
+                this.baseX = this.x;
+                this.baseY = this.y;
+                this.density = (Math.random() * 10) + 1;
+                this.color = this.getRandomColor();
+                this.targetColor = this.color;
+                this.vx = 0;
+                this.vy = 0;
+                this.transitionStartTime = null;
+            }
+
+            getRandomColor() {
+                return `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
+            }
+
+            update(currentTime) {
+                if (mouse.x != null && mouse.y != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    let forceDirectionX = dx / distance;
+                    let forceDirectionY = dy / distance;
+                    let maxDistance = 150;
+                    let force = (maxDistance - distance) / maxDistance;
+                    let directionX = forceDirectionX * force * this.density * 0.1;
+                    let directionY = forceDirectionY * force * this.density * 0.1;
+
+                    if (distance < maxDistance) {
+                        this.vx += directionX;
+                        this.vy += directionY;
+                    }
+                }
+
+                let dx = this.baseX - this.x;
+                let dy = this.baseY - this.y;
+                this.vx += dx * 0.002;
+                this.vy += dy * 0.002;
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.9;
+                this.vy *= 0.9;
+
+                // Color transition
+                if (this.transitionStartTime !== null) {
+                    const elapsed = currentTime - this.transitionStartTime;
+                    if (elapsed < TRANSITION_DURATION) {
+                        const progress = elapsed / TRANSITION_DURATION;
+                        this.color = this.interpolateColor(this.color, this.targetColor, progress);
+                    } else {
+                        this.color = this.targetColor;
+                        this.transitionStartTime = null;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            setTargetColor(newColor) {
+                this.targetColor = newColor;
+                this.transitionStartTime = performance.now();
+            }
+
+            interpolateColor(color1, color2, factor) {
+                if (factor > 1) factor = 1;
+                if (factor < 0) factor = 0;
+                const result = color1.match(/\d+/g).map((a, i) => {
+                    return Math.round(a * (1 - factor) + color2.match(/\d+/g)[i] * factor);
+                });
+                return `rgb(${result.join(', ')})`;
+            }
+        }
+
+        const imageSettings = {
+            music: { scale: 0.5, offsetX: 0, offsetY: 0 },
+            mona: { scale: 0.5, offsetX: 0, offsetY: 0 },
+            star: { scale: 0.35, offsetX: 0, offsetY: 0 },
+            nighthawks: { scale: 0.5, offsetX: 0, offsetY: 0 },
+            goblin: { scale: 0.5, offsetX: -canvas.width * 0.2, offsetY: 0 },
+            minecraft: { scale: 0.5, offsetX: -canvas.width * 0.2, offsetY: 0 },
+            discovery: { scale: 0.5, offsetX: -canvas.width * 0.2, offsetY: 0 }
+        };
+
+        async function createImageData(imageSrc) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = img.width;
+                    tempCanvas.height = img.height;
+                    tempCtx.drawImage(img, 0, 0, img.width, img.height);
+                    resolve(tempCtx.getImageData(0, 0, img.width, img.height));
+                };
+                img.onerror = reject;
+                img.src = `images/${imageSrc}`;
+            });
+        }
+
+        function createParticlesFromImageData(imageData, scale = 1, offsetX = 0, offsetY = 0, isGrayscale = false, isColorMatching = false) {
+            const pixels = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+
+            let newParticles = [];
+            let validPositions = [];
+
+            if (isColorMatching) {
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const index = (y * width + x) * 4;
+                        validPositions.push({ 
+                            x, y, 
+                            color: `rgb(${pixels[index]}, ${pixels[index + 1]}, ${pixels[index + 2]})`
+                        });
+                    }
+                }
+            } else {
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        if (pixels[(y * width + x) * 4 + 3] > 128) {
+                            validPositions.push({ x, y });
+                        }
+                    }
+                }
+            }
+
+            while (validPositions.length < PARTICLE_COUNT) {
+                validPositions = validPositions.concat(validPositions);
+            }
+
+            for (let i = validPositions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [validPositions[i], validPositions[j]] = [validPositions[j], validPositions[i]];
+            }
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const { x, y, color } = validPositions[i];
+                const canvasX = (x - width / 2) * scale + centerX + offsetX;
+                const canvasY = (y - height / 2) * scale + centerY + offsetY;
+                
+                if (i < particles.length) {
+                    particles[i].baseX = canvasX;
+                    particles[i].baseY = canvasY;
+                    if (isColorMatching) {
+                        particles[i].setTargetColor(color);
+                    }
+                    newParticles.push(particles[i]);
+                } else {
+                    const particle = new Particle(canvasX, canvasY);
+                    if (isColorMatching) {
+                        particle.setTargetColor(color);
+                    }
+                    newParticles.push(particle);
+                }
+            }
+
+            particles = newParticles;
+        }
+
+        async function init() {
+            const imageData = await createImageData('cat.png');
+            const settings = imageSettings.music;
+            createParticlesFromImageData(imageData, settings.scale, settings.offsetX, settings.offsetY);
+        }
+
+        async function transformToImage(imageName) {
+            const imageData = await createImageData(`${imageName}.jpg`);
+            const settings = imageSettings[imageName];
+            createParticlesFromImageData(imageData, settings.scale, settings.offsetX, settings.offsetY, false, true);
+        }
+
+        let prodInterval;
+        const prodImages = ['goblin', 'minecraft', 'discovery'];
+        let currentProdIndex = 0;
+
+        async function startProdRotation() {
+            clearInterval(prodInterval);
+            currentProdIndex = 0;
+            await transformToImage(prodImages[currentProdIndex]);
+            prodInterval = setInterval(async () => {
+                currentProdIndex = (currentProdIndex + 1) % prodImages.length;
+                await transformToImage(prodImages[currentProdIndex]);
+            }, 5000);
+        }
+
+        function stopProdRotation() {
+            clearInterval(prodInterval);
+        }
+
+        async function showContent(tab) {
+            if (currentShape !== tab) {
+                stopProdRotation();
+                if (tab === 'music') {
+                    await init();
+                } else if (tab === 'prod') {
+                    await startProdRotation();
+                } else {
+                    await transformToImage(tab);
+                }
+                currentShape = tab;
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById("mySidebar");
+            if (sidebar.style.width === "250px") {
+                sidebar.style.width = "0";
+            } else {
+                sidebar.style.width = "250px";
+            }
+        }
+
+        function animate(timestamp) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let particle of particles) {
+                particle.update(timestamp);
+                particle.draw();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        canvas.addEventListener('mousemove', (event) => {
+            mouse.x = event.x;
+            mouse.y = event.y;
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            imageSettings.goblin.offsetX = -canvas.width * 0.2;
+            imageSettings.minecraft.offsetX = -canvas.width * 0.2;
+            imageSettings.discovery.offsetX = -canvas.width * 0.2;
+            showContent(currentShape);
+        });
+
+        (async function() {
+            await init();
+            requestAnimationFrame(animate);
+        })();
+    </script>
+</body>
+</html>
