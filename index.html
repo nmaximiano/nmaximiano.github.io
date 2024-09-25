@@ -3,349 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accord - Dynamic Colored Particles with Smooth Transitions</title>
+    <title>Nick Maximiano's Portfolio</title>
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            background-color: #1a1a1a; 
-            font-family: Arial, sans-serif; 
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
             color: #f0f0f0;
-        }
-        canvas { display: block; }
-        .hamburger {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            cursor: pointer;
-            z-index: 1000;
-        }
-        .bar {
-            width: 25px;
-            height: 3px;
-            background-color: #f0f0f0;
-            margin: 5px 0;
-            transition: 0.4s;
-        }
-        .sidebar {
+            overflow: hidden;
             height: 100%;
-            width: 0;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: #111;
-            overflow-x: hidden;
-            transition: 0.5s;
-            padding-top: 60px;
-            z-index: 999;
-        }
-        .sidebar a {
-            padding: 10px 15px;
-            text-decoration: none;
-            font-size: 25px;
-            color: #f0f0f0;
-            display: block;
-            transition: 0.3s;
-        }
-        .sidebar a:hover {
-            background-color: #575757;
+            width: 100%;
         }
         #main {
-            transition: margin-left 0.5s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: center;
+            position: relative; /* Enable positioning of child elements */
+        }
+        #pixelCanvas {
+            display: block;
+            flex-grow: 1;
+            width: 100%;
+            max-height: 70%;
+        }
+        #buttonContainer {
+            display: none;
+            justify-content: center;
+            gap: 100px;
+            margin-top: 10px;
+        }
+        .button {
+            position: relative;
+            width: 300px;
+            height: 70px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .buttonCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            opacity: 0; /* Initially hidden */
+            transition: opacity 2s; /* Smooth transition for the opacity */
+        }
+        #typingText {
+            opacity: 0;
+            position: absolute;
+            text-align: left;
+            color: #81ff76;
+            top: 35%; /* Center vertically */
+            left: 45%; /* Center horizontally */
+            transform: translateY(-50%);
+            font-family: 'Lucida Consoleaz', Courier, monospace;
+            font-size: 48px; /* Adjustable font size */
+            line-height: 1.5; /* Line spacing */
         }
     </style>
 </head>
 <body>
-    <div class="hamburger" onclick="toggleSidebar()">
-        <div class="bar"></div>
-        <div class="bar"></div>
-        <div class="bar"></div>
-    </div>
-    <div id="mySidebar" class="sidebar">
-        <a href="javascript:void(0)" onclick="showContent('music')">music</a>
-        <a href="javascript:void(0)" onclick="showContent('mona')">mona</a>
-        <a href="javascript:void(0)" onclick="showContent('star')">star</a>
-        <a href="javascript:void(0)" onclick="showContent('nighthawks')">nighthawks</a>
-        <a href="javascript:void(0)" onclick="showContent('goblin')">goblin</a>
-        <a href="javascript:void(0)" onclick="showContent('minecraft')">minecraft</a>
-        <a href="javascript:void(0)" onclick="showContent('discovery')">discovery</a>
-        <a href="javascript:void(0)" onclick="showContent('prod')">prod</a>
-    </div>
     <div id="main">
-        <canvas id="particleCanvas"></canvas>
+        <canvas id="pixelCanvas"></canvas>
+        <div id="buttonContainer">
+            <div class="button" id="aboutButton">
+                <canvas class="buttonCanvas"></canvas>
+            </div>
+            <div class="button" id="projectsButton">
+                <canvas class="buttonCanvas"></canvas>
+            </div>
+            <div class="button" id="musicButton">
+                <canvas class="buttonCanvas"></canvas>
+            </div>
+        </div>
+        <div id="typingText">
+            <div id="line1"></div>
+            <div id="line2"></div>
+        </div>
     </div>
-
     <script>
-        const canvas = document.getElementById('particleCanvas');
+        const canvas = document.getElementById('pixelCanvas');
         const ctx = canvas.getContext('2d');
+        const pixelSize = 5;
+        let catPixels = [];
+        let namePixels = [];
+        let buttonPixels = [];
+        let animationStartTime;
 
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        let particles = [];
-        let mouse = { x: null, y: null };
-        let currentShape = 'accord';
-        const PARTICLE_COUNT = 5000;
-        const TRANSITION_DURATION = 2000; // 2 seconds for color transition
-
-        class Particle {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.size = Math.random() * 2 + 1;
-                this.baseX = this.x;
-                this.baseY = this.y;
-                this.density = (Math.random() * 10) + 1;
-                this.color = this.getRandomColor();
-                this.targetColor = this.color;
-                this.vx = 0;
-                this.vy = 0;
-                this.transitionStartTime = null;
-            }
-
-            getRandomColor() {
-                return `rgb(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)})`;
-            }
-
-            update(currentTime) {
-                if (mouse.x != null && mouse.y != null) {
-                    let dx = mouse.x - this.x;
-                    let dy = mouse.y - this.y;
-                    let distance = Math.sqrt(dx * dx + dy * dy);
-                    let forceDirectionX = dx / distance;
-                    let forceDirectionY = dy / distance;
-                    let maxDistance = 150;
-                    let force = (maxDistance - distance) / maxDistance;
-                    let directionX = forceDirectionX * force * this.density * 0.1;
-                    let directionY = forceDirectionY * force * this.density * 0.1;
-
-                    if (distance < maxDistance) {
-                        this.vx += directionX;
-                        this.vy += directionY;
-                    }
-                }
-
-                let dx = this.baseX - this.x;
-                let dy = this.baseY - this.y;
-                this.vx += dx * 0.002;
-                this.vy += dy * 0.002;
-
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vx *= 0.9;
-                this.vy *= 0.9;
-
-                // Color transition
-                if (this.transitionStartTime !== null) {
-                    const elapsed = currentTime - this.transitionStartTime;
-                    if (elapsed < TRANSITION_DURATION) {
-                        const progress = elapsed / TRANSITION_DURATION;
-                        this.color = this.interpolateColor(this.color, this.targetColor, progress);
-                    } else {
-                        this.color = this.targetColor;
-                        this.transitionStartTime = null;
-                    }
-                }
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.fill();
-            }
-
-            setTargetColor(newColor) {
-                this.targetColor = newColor;
-                this.transitionStartTime = performance.now();
-            }
-
-            interpolateColor(color1, color2, factor) {
-                if (factor > 1) factor = 1;
-                if (factor < 0) factor = 0;
-                const result = color1.match(/\d+/g).map((a, i) => {
-                    return Math.round(a * (1 - factor) + color2.match(/\d+/g)[i] * factor);
-                });
-                return `rgb(${result.join(', ')})`;
-            }
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight * 0.6;
         }
 
-        const imageSettings = {
-            music: { scale: 0.5, offsetX: 0, offsetY: 0 },
-            mona: { scale: 0.5, offsetX: 0, offsetY: 0 },
-            star: { scale: 0.35, offsetX: 0, offsetY: 0 },
-            nighthawks: { scale: 0.5, offsetX: 0, offsetY: 0 },
-            goblin: { scale: 0.5, offsetX: -canvas.width * 0.2, offsetY: 0 },
-            minecraft: { scale: 0.5, offsetX: -canvas.width * 0.2, offsetY: 0 },
-            discovery: { scale: 0.5, offsetX: -canvas.width * 0.2, offsetY: 0 }
-        };
-
-        async function createImageData(imageSrc) {
+        async function loadImage(src) {
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                img.onload = () => {
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    tempCanvas.width = img.width;
-                    tempCanvas.height = img.height;
-                    tempCtx.drawImage(img, 0, 0, img.width, img.height);
-                    resolve(tempCtx.getImageData(0, 0, img.width, img.height));
-                };
+                img.onload = () => resolve(img);
                 img.onerror = reject;
-                img.src = `images/${imageSrc}`;
+                img.src = src;
             });
         }
 
-        function createParticlesFromImageData(imageData, scale = 1, offsetX = 0, offsetY = 0, isGrayscale = false, isColorMatching = false) {
-            const pixels = imageData.data;
-            const width = imageData.width;
-            const height = imageData.height;
+        async function initPixels() {
+            const catImage = await loadImage('images/cat1.png');
+            const scaleFactor = Math.min(canvas.width / catImage.width, canvas.height / catImage.height) * 1.8;
+            const scaledWidth = catImage.width * scaleFactor;
+            const scaledHeight = catImage.height * scaleFactor;
+            const startX = (canvas.width - scaledWidth) / 2;
+            const startY = (canvas.height - scaledHeight) / 2 + 40;
 
-            let newParticles = [];
-            let validPositions = [];
+            ctx.drawImage(catImage, startX, startY, scaledWidth, scaledHeight);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-            if (isColorMatching) {
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        const index = (y * width + x) * 4;
-                        validPositions.push({ 
-                            x, y, 
-                            color: `rgb(${pixels[index]}, ${pixels[index + 1]}, ${pixels[index + 2]})`
+            for (let y = 0; y < canvas.height; y += pixelSize) {
+                for (let x = 0; x < canvas.width; x += pixelSize) {
+                    const i = (y * canvas.width + x) * 4;
+                    if (imageData.data[i + 3] > 0) {
+                        catPixels.push({
+                            x,
+                            y,
+                            alpha: 0,
+                            targetAlpha: Math.random() * 0.5 + 0.5,
+                            flickerSpeed: Math.random() * 0.05 + 0.02
                         });
                     }
                 }
-            } else {
-                for (let y = 0; y < height; y++) {
-                    for (let x = 0; x < width; x++) {
-                        if (pixels[(y * width + x) * 4 + 3] > 128) {
-                            validPositions.push({ x, y });
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = 'bold 64px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const nameY = startY + 180;
+            ctx.fillText('NICK MAXIMIANO', canvas.width / 2, nameY);
+
+            const textImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < canvas.height; y += pixelSize) {
+                for (let x = 0; x < canvas.width; x += pixelSize) {
+                    const i = (y * canvas.width + x) * 4;
+                    if (textImageData.data[i + 3] > 0) {
+                        namePixels.push({
+                            x,
+                            y,
+                            alpha: 0,
+                            targetAlpha: Math.random() * 0.5 + 0.5,
+                            flickerSpeed: Math.random() * 0.05 + 0.02
+                        });
+                    }
+                }
+            }
+
+            // Initialize button pixels
+            const buttonTexts = ["ABOUT", "PROJECTS", "MUSIC"];
+            document.querySelectorAll('.buttonCanvas').forEach((canvas, index) => {
+                const btnCtx = canvas.getContext('2d');
+                canvas.width = 220;
+                canvas.height = 50;
+                btnCtx.font = 'bold 40px Arial';
+                btnCtx.textAlign = 'center';
+                btnCtx.textBaseline = 'middle';
+                btnCtx.fillStyle = 'white';
+                btnCtx.fillText(buttonTexts[index], canvas.width / 2, canvas.height / 2);
+
+                const imageData = btnCtx.getImageData(0, 0, canvas.width, canvas.height);
+                const buttonPixelsForThisButton = [];
+
+                for (let y = 0; y < canvas.height; y += pixelSize) {
+                    for (let x = 0; x < canvas.width; x += pixelSize) {
+                        const i = (y * canvas.width + x) * 4;
+                        if (imageData.data[i + 3] > 0) {
+                            buttonPixelsForThisButton.push({
+                                x,
+                                y,
+                                alpha: 0,
+                                targetAlpha: Math.random() * 0.5 + 0.5,
+                                flickerSpeed: Math.random() * 0.05 + 0.02
+                            });
                         }
                     }
                 }
+
+                buttonPixels.push(buttonPixelsForThisButton);
+            });
+
+            document.getElementById("buttonContainer").style.display = "flex";
+        }
+
+        function drawPixels(timestamp) {
+            if (!animationStartTime) animationStartTime = timestamp;
+            const elapsedTime = timestamp - animationStartTime;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const catFadeInDelay = 300;
+            const nameFadeInDelay = 600;
+            const buttonFadeInDelay = 900;
+
+            // Cat pixels
+            if (elapsedTime > catFadeInDelay) {
+                const fadeInTime = 2000;
+                const catAlpha = Math.min(1, (elapsedTime - catFadeInDelay) / fadeInTime);
+
+                catPixels.forEach(pixel => {
+                    pixel.alpha += (pixel.targetAlpha - pixel.alpha) * 0.01;
+                    pixel.alpha += Math.sin(Date.now() * pixel.flickerSpeed) * 0.05;
+                    pixel.alpha = Math.max(0, Math.min(1, pixel.alpha));
+
+                    ctx.fillStyle = `rgba(255, 255, 255, ${pixel.alpha * catAlpha})`;
+                    ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+                });
             }
 
-            while (validPositions.length < PARTICLE_COUNT) {
-                validPositions = validPositions.concat(validPositions);
+            // Name pixels
+            if (elapsedTime > nameFadeInDelay) {
+                const fadeInTime = 2000;
+                const nameAlpha = Math.min(1, (elapsedTime - nameFadeInDelay) / fadeInTime);
+
+                namePixels.forEach(pixel => {
+                    pixel.alpha += (pixel.targetAlpha - pixel.alpha) * 0.01;
+                    pixel.alpha += Math.sin(Date.now() * pixel.flickerSpeed) * 0.05;
+                    pixel.alpha = Math.max(0, Math.min(1, pixel.alpha));
+
+                    ctx.fillStyle = `rgba(255, 255, 255, ${pixel.alpha * nameAlpha})`;
+                    ctx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+                });
             }
 
-            for (let i = validPositions.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [validPositions[i], validPositions[j]] = [validPositions[j], validPositions[i]];
+            // Button pixels
+            if (elapsedTime > buttonFadeInDelay) {
+                const fadeInTime = 2000;
+                const buttonAlpha = Math.min(1, (elapsedTime - buttonFadeInDelay) / fadeInTime);
+
+                document.querySelectorAll('.buttonCanvas').forEach((canvas, index) => {
+                    const btnCtx = canvas.getContext('2d');
+                    btnCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    buttonPixels[index].forEach(pixel => {
+                        pixel.alpha += (pixel.targetAlpha - pixel.alpha) * 0.01;
+                        pixel.alpha += Math.sin(Date.now() * pixel.flickerSpeed) * 0.05;
+                        pixel.alpha = Math.max(0, Math.min(1, pixel.alpha));
+
+                        btnCtx.fillStyle = `rgba(255, 255, 255, ${pixel.alpha * buttonAlpha})`;
+                        btnCtx.fillRect(pixel.x, pixel.y, pixelSize, pixelSize);
+                    });
+                    canvas.style.opacity = buttonAlpha; // Update opacity based on fade-in
+                });
             }
 
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
+            requestAnimationFrame(drawPixels);
+        }
 
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
-                const { x, y, color } = validPositions[i];
-                const canvasX = (x - width / 2) * scale + centerX + offsetX;
-                const canvasY = (y - height / 2) * scale + centerY + offsetY;
-                
-                if (i < particles.length) {
-                    particles[i].baseX = canvasX;
-                    particles[i].baseY = canvasY;
-                    if (isColorMatching) {
-                        particles[i].setTargetColor(color);
-                    }
-                    newParticles.push(particles[i]);
-                } else {
-                    const particle = new Particle(canvasX, canvasY);
-                    if (isColorMatching) {
-                        particle.setTargetColor(color);
-                    }
-                    newParticles.push(particle);
+        function typeText(elementId, text, delay) {
+            const element = document.getElementById(elementId);
+            let index = 0;
+
+            function type() {
+                if (index < text.length) {
+                    element.innerHTML += text.charAt(index);
+                    index++;
+                    setTimeout(type, 100); // Typing speed
                 }
             }
 
-            particles = newParticles;
+            setTimeout(() => {
+                document.getElementById("typingText").style.opacity = 1; // Fade in the text
+                type();
+            }, delay);
         }
 
         async function init() {
-            const imageData = await createImageData('cat.png');
-            const settings = imageSettings.music;
-            createParticlesFromImageData(imageData, settings.scale, settings.offsetX, settings.offsetY);
+            resizeCanvas();
+            await initPixels();
+            animationStartTime = null;
+            requestAnimationFrame(drawPixels);
+
+            // Start typing effect after a delay
+            setTimeout(() => {
+                typeText("line1", "this website was designed", 1000); // Start typing after 3 seconds
+                typeText("line2", "with the help of Claude.ai", 4500); // Start second line after 4 seconds
+            }, 3000); // Delay before starting the typing effect
         }
-
-        async function transformToImage(imageName) {
-            const imageData = await createImageData(`${imageName}.jpg`);
-            const settings = imageSettings[imageName];
-            createParticlesFromImageData(imageData, settings.scale, settings.offsetX, settings.offsetY, false, true);
-        }
-
-        let prodInterval;
-        const prodImages = ['goblin', 'minecraft', 'discovery'];
-        let currentProdIndex = 0;
-
-        async function startProdRotation() {
-            clearInterval(prodInterval);
-            currentProdIndex = 0;
-            await transformToImage(prodImages[currentProdIndex]);
-            prodInterval = setInterval(async () => {
-                currentProdIndex = (currentProdIndex + 1) % prodImages.length;
-                await transformToImage(prodImages[currentProdIndex]);
-            }, 5000);
-        }
-
-        function stopProdRotation() {
-            clearInterval(prodInterval);
-        }
-
-        async function showContent(tab) {
-            if (currentShape !== tab) {
-                stopProdRotation();
-                if (tab === 'music') {
-                    await init();
-                } else if (tab === 'prod') {
-                    await startProdRotation();
-                } else {
-                    await transformToImage(tab);
-                }
-                currentShape = tab;
-            }
-        }
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById("mySidebar");
-            if (sidebar.style.width === "250px") {
-                sidebar.style.width = "0";
-            } else {
-                sidebar.style.width = "250px";
-            }
-        }
-
-        function animate(timestamp) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let particle of particles) {
-                particle.update(timestamp);
-                particle.draw();
-            }
-            requestAnimationFrame(animate);
-        }
-
-        canvas.addEventListener('mousemove', (event) => {
-            mouse.x = event.x;
-            mouse.y = event.y;
-        });
-
-        canvas.addEventListener('mouseout', () => {
-            mouse.x = null;
-            mouse.y = null;
-        });
 
         window.addEventListener('resize', () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            imageSettings.goblin.offsetX = -canvas.width * 0.2;
-            imageSettings.minecraft.offsetX = -canvas.width * 0.2;
-            imageSettings.discovery.offsetX = -canvas.width * 0.2;
-            showContent(currentShape);
+            resizeCanvas();
+            catPixels = [];
+            namePixels = [];
+            buttonPixels = [];
+            init();
         });
 
-        (async function() {
-            await init();
-            requestAnimationFrame(animate);
-        })();
+        // Link button functionality
+        document.getElementById('aboutButton').onclick = () => {
+            window.location.href = 'about.html';
+        };
+        document.getElementById('projectsButton').onclick = () => {
+            window.location.href = 'projects.html';
+        };
+        document.getElementById('musicButton').onclick = () => {
+            window.location.href = 'music.html';
+        };
+
+        init();
     </script>
 </body>
 </html>
