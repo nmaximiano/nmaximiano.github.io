@@ -206,4 +206,10 @@ document.addEventListener('click', function(event) {
     }
 });
 
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        document.getElementById('footer').style.opacity = 1;
+    }, 1000); // Adjust the delay as needed
+});
+
 init();

@@ -57,6 +57,8 @@ body, html {
 }
 
 #aboutButton:hover, #projectsButton:hover {
+    transform: translateY(-5px); /* Float up slightly */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3); /* Add drop shadow */
     opacity: 0.8;
 }
 
@@ -131,17 +133,19 @@ body, html {
 
 #footer {
     position: fixed;
-    bottom: 10px;
+    bottom: 12px;
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-size: 12px;
-    color: #f3f3f3;
+    color: #f0f0f0;
     opacity: 0.7;
     padding: 0 10px;
     box-sizing: border-box;
     margin-bottom: 10px;
+    transition: opacity 3s ease;
+    opacity: 0;
 }
 
 #footer-left {
@@ -159,4 +163,8 @@ body, html {
     flex: 1;
     text-align: right;
     margin-right: 10px;
+}
+
+#footer-center #email, #footer-center #phone {
+    margin: 0 20px; /* Adjust the value to increase or decrease the space */
 }
