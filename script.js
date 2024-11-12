@@ -151,14 +151,16 @@ function toggleNav() {
             sidebar.style.width = "0";
             aboutButton.style.backgroundColor = "#1a1a1a";
             aboutButton.style.color = "#ffffff";
+            document.body.style.overflow = "auto"; // Enable scrolling after sidebar closes
         }, 300); // Wait for content to fade out before closing sidebar
     } else {
-        sidebar.style.width = "250px";
+        document.body.style.overflow = "hidden"; // Prevent scrolling while sidebar is opening
+        sidebar.style.width = "300px";
         aboutButton.style.backgroundColor = "#ffffff";
         aboutButton.style.color = "#1a1a1a";
         setTimeout(() => {
             sidebarContent.style.opacity = "1";
-        }, 300); // Wait for sidebar to open before fading in content
+        }, 500); // Wait for sidebar to open before fading in content
     }
 
     sidebarOpen = !sidebarOpen;
